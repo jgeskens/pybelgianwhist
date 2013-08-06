@@ -10,7 +10,8 @@ class Card(object):
     """
 
     def __init__(self, rank, suit):
-        self.name = '%s of %s' % (RANKS[rank], SUITS[suit])
+        #self.name = '%s of %s' % (RANKS[rank], SUITS[suit])
+        self.name = '%s%s' % (RANKS[rank][0], SUITS[suit][0].upper())
         self.rank = rank
         self.suit = suit
 
@@ -22,10 +23,13 @@ class Card(object):
 
 
 def find_card_from_string(s, cards):
-    rank_str, suit_str = s.split(' of ')
-    rank = RANKS.index(rank_str)
-    suit = SUITS.index(suit_str)
-    found = [i for i, c in enumerate(cards) if c.rank == rank and c.suit == suit]
+    if ' of ' in s:
+        rank_str, suit_str = s.split(' of ')
+        rank = RANKS.index(rank_str)
+        suit = SUITS.index(suit_str)
+        found = [i for i, c in enumerate(cards) if c.rank == rank and c.suit == suit]
+    else:
+        found = [i for i, c in enumerate(cards) if RANKS[c.rank][0] == s[0] and SUITS[c.suit][0] == s[1].lower()]
     return found[0] if found else None
 
 
@@ -49,19 +53,36 @@ class Deck(object):
 class Trick(object):
     def __init__(self):
         self.played_cards = []
+    
+    def suit(self):
+        if len(self.played_cards) > 0:
+            return self.played_cards[0][0].suit
+        return -1
 
     def play(self, card, player):
         self.played_cards.append((card, player))
 
-    def sort(self, suit, trump=-1):
-        suit_rank = dict((s, (2 if s == trump else \
-                             (1 if s == suit else \
-                              0))) for s in xrange(4))
+    def sort(self, trump=-1):
         return sorted(self.played_cards,
-                      key=lambda p: suit_rank[p[0].suit] * 13 + p[0].rank)
+                      key=lambda p: self.sort_key(p[0], trump))
 
-    def winning(self, suit, trump=-1):
-        return self.sort(suit, trump)[-1]
+    def winning(self, trump=-1):
+        return self.sort(trump)[-1]
+    
+    def sort_key(self, card, trump=-1):
+        suit_rank = 0
+        suit = self.suit()
+        if card.suit == trump:
+            suit_rank = 2
+        elif suit == -1 or suit == card.suit:
+            suit_rank = 1
+        return suit_rank * 13 + card.rank
+    
+    def winning_cards(self, cards, trump):
+        if len(self.played_cards) == 0:
+            return []
+        winning = self.sort_key(self.winning(trump)[0], trump)
+        return [card for card in cards if self.sort_key(card, trump) > winning]
 
 
 class Game(object):
@@ -104,7 +125,7 @@ class Game(object):
             self.trick.play(played_card, player)
             self.playing = (self.playing + 1) % 4
 
-        winning_card, winning_player = self.trick.winning(suit, self.trump.suit)
+        winning_card, winning_player = self.trick.winning(self.trump.suit)
         print('%s gets the trick' % winning_player)
         self.tricks.append(self.trick)
         winning_player.tricks.append(self.trick)
@@ -163,15 +184,24 @@ class AI(object):
         if len(game.trick.played_cards) > 0:
             in_suits = player.sorted_suit(game.trick.played_cards[0][0].suit)
             if in_suits:
-                return player.hand.pop(player.hand.index(in_suits[-1]))
+                winning_cards = game.trick.winning_cards(in_suits, game.trump.suit)
+                if winning_cards:
+                    return player.hand.pop(player.hand.index(winning_cards[-1]))
+                else:
+                    return player.hand.pop(player.hand.index(in_suits[0]))
             trumps = player.sorted_suit(game.trump.suit)
             if trumps:
-                return player.hand.pop(player.hand.index(trumps[-1]))
+                winning_cards = game.trick.winning_cards(trumps, game.trump.suit)
+                if winning_cards:
+                    return player.hand.pop(player.hand.index(winning_cards[-1]))
+                else:
+                    lowest_non_trump = sorted(player.hand, key=lambda c: c.rank * (2 if c.suit == game.trump.suit else 1))[0]
+                    return player.hand.pop(player.hand.index(lowest_non_trump))
             lowest = sorted(player.hand, key=lambda c: c.rank)[0]
             return player.hand.pop(player.hand.index(lowest))
         else:
             trumps = player.sorted_suit(game.trump.suit)
-            if trumps:
+            if trumps and trumps[-1].rank > 8:
                 return player.hand.pop(player.hand.index(trumps[-1]))
             highest = sorted(player.hand, key=lambda c: c.rank)[-1]
             return player.hand.pop(player.hand.index(highest))
@@ -180,6 +210,7 @@ class AI(object):
 class Human(object):
     def play(self, player, game):
         print(repr(player))
+        print(repr(game.trick.winning_cards(player.valid_cards(game), game.trump)))
         print('%s, which card? ' % player.name)
 
         sys.stdout.flush()
