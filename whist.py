@@ -11,7 +11,7 @@ class Card(object):
 
     def __init__(self, rank, suit):
         #self.name = '%s of %s' % (RANKS[rank], SUITS[suit])
-        self.name = '%s%s' % (RANKS[rank][0], SUITS[suit][0].upper())
+        self.name = '%s%s' % (RANKS[rank][0] if rank != 8 else 't', SUITS[suit][0].upper())
         self.rank = rank
         self.suit = suit
 
@@ -29,7 +29,7 @@ def find_card_from_string(s, cards):
         suit = SUITS.index(suit_str)
         found = [i for i, c in enumerate(cards) if c.rank == rank and c.suit == suit]
     else:
-        found = [i for i, c in enumerate(cards) if RANKS[c.rank][0] == s[0] and SUITS[c.suit][0] == s[1].lower()]
+        found = [i for i, c in enumerate(cards) if RANKS[c.rank][0] == s[0] or (c.rank == 8 and s[0] == 't') and SUITS[c.suit][0] == s[1].lower()]
     return found[0] if found else None
 
 
@@ -94,6 +94,11 @@ class Game(object):
         self.playing = 1
         self.tricks = []
         self.trick = None
+
+    def start(self):
+        self.deck.shuffle()
+        self.deck.hef_af()
+        self.deal()
 
     def deal(self):
         p = (self.dealer + 1) % 4
@@ -224,9 +229,7 @@ if __name__ == '__main__':
 
     print('Welcome to Belgian Whist!')
     g = Game((Player('Jef', AI()), Player('Koen', AI()), Player('Ingo', AI()), Player('Olivier', AI())))
-    g.deck.shuffle()
-    g.deck.hef_af()
-    g.deal()
+    g.start()
     print('Trump card is %s.' % g.trump)
 
     for i in xrange(4):
@@ -246,7 +249,4 @@ if __name__ == '__main__':
         for t in g.players[i].tricks:
             print '*',
         print('')
-
-
-
 
