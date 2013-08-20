@@ -121,12 +121,10 @@ class Game(object):
     def round(self):
         print('---')
         self.trick = Trick()
-        suit = -1
+
         for i in xrange(4):
             player = self.players[self.playing]
             played_card = player.play(self)
-            if i == 0:
-                suit = played_card.suit
             self.trick.play(played_card, player)
             self.playing = (self.playing + 1) % 4
 

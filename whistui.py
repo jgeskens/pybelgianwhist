@@ -77,18 +77,6 @@ class WhistApp(Tk.Frame):
         self.tag_to_card = {}
 
         for c in xrange(13):
-            self.canvas.players[3][c] = self.canvas.create_image((self.middle[0] + c * self.card_offset[0],
-                                                                  16),
-                                                                 image=None, anchor='nw')
-            self.tag_to_card[self.canvas.players[3][c]] = (3, c)
-
-        for c in xrange(13):
-            self.canvas.players[2][c] = self.canvas.create_image((self.size[0] - 16 - self.card_size[0],
-                                                                  self.middle[1] + c * self.card_offset[1]),
-                                                                 image=None, anchor='nw')
-            self.tag_to_card[self.canvas.players[2][c]] = (2, c)
-
-        for c in xrange(13):
             self.canvas.players[0][c] = self.canvas.create_image((self.middle[0] + c * self.card_offset[0],
                                                                   self.size[1] - 16 - self.card_size[1]),
                                                                  image=None, anchor='nw')
@@ -100,8 +88,60 @@ class WhistApp(Tk.Frame):
                                                                  image=None, anchor='nw')
             self.tag_to_card[self.canvas.players[1][c]] = (1, c)
 
+        for c in xrange(13):
+            self.canvas.players[2][c] = self.canvas.create_image((self.size[0] - 16 - self.card_size[0],
+                                                                  self.middle[1] + c * self.card_offset[1]),
+                                                                 image=None, anchor='nw')
+            self.tag_to_card[self.canvas.players[2][c]] = (2, c)
+
+        for c in xrange(13):
+            self.canvas.players[3][c] = self.canvas.create_image((self.middle[0] + c * self.card_offset[0],
+                                                                  16),
+                                                                 image=None, anchor='nw')
+            self.tag_to_card[self.canvas.players[3][c]] = (3, c)
+
         for t in self.tag_to_card.keys():
             self.canvas.tag_bind(t, '<ButtonRelease-1>', self.handle_card_click_factory(t))
+
+        # Player labels
+
+        self.canvas.player_labels = [None] * 4
+        self.canvas.player_labels[0] = self.canvas.create_text((self.middle[0],
+                                                                self.size[1] - self.card_size[1] - 16),
+                                                               text='Player 1', anchor='sw')
+        self.canvas.player_labels[1] = self.canvas.create_text((16,
+                                                                self.middle[1]),
+                                                               text='Player 2', anchor='sw')
+        self.canvas.player_labels[2] = self.canvas.create_text((self.middle[0],
+                                                                self.card_size[1] + 32),
+                                                               text='Player 3', anchor='sw')
+        self.canvas.player_labels[3] = self.canvas.create_text((self.size[0] - self.card_size[0] - 16,
+                                                                self.middle[1]),
+                                                               text='Player 4', anchor='sw')
+
+        # Tricks
+
+        self.canvas.tricks = [[None] * 13 for p in xrange(4)]
+
+        for c in xrange(13):
+            self.canvas.tricks[0][c] = self.canvas.create_image((self.middle[0],
+                                                                 self.size[1] - self.card_size[1] - 32),
+                                                                image='', anchor='sw')
+
+        for c in xrange(13):
+            self.canvas.tricks[1][c] = self.canvas.create_image((self.card_size[0] + 32 + c * 4,
+                                                                 self.size[1] / 2),
+                                                                image='', anchor='w')
+
+        for c in xrange(13):
+            self.canvas.tricks[2][c] = self.canvas.create_image((self.size[0] - self.card_size[0] - 32 + (c - 12) * 4,
+                                                                 self.size[1] / 2),
+                                                                image='', anchor='e')
+
+        for c in xrange(13):
+            self.canvas.tricks[3][c] = self.canvas.create_image((self.middle[0] + c * 4,
+                                                                 self.card_size[1] + 32),
+                                                                image='', anchor='nw')
 
         # Trick
 
@@ -116,6 +156,10 @@ class WhistApp(Tk.Frame):
                                                          self.size[1] / 2 + self.card_offset[1]), image=None)
 
 
+        # Trump
+        self.canvas.trump = self.canvas.create_image((192 + self.card_size[0],
+                                                      self.size[1] / 2), image=self.blank_img)
+
         self.pack(fill=Tk.BOTH, expand=1)
 
 
@@ -128,8 +172,15 @@ class WhistApp(Tk.Frame):
                                                  image=self.bg_img, anchor='nw')
                     self.canvas.bg_tiles[(x, y)] = i
 
+    def draw_trump(self):
+        img = self.card_imgs[str(self.game.trump)] if self.game.trump and not self.game.tricks else ''
+        self.canvas.itemconfigure(self.canvas.trump, image=img)
+
     def draw_players(self):
         for p in xrange(4):
+            self.canvas.itemconfigure(self.canvas.player_labels[p],
+                                      text = self.game.players[p].name)
+
             for c in xrange(13):
                 if c >= len(self.game.players[p].hand):
                     img = ''
@@ -140,6 +191,12 @@ class WhistApp(Tk.Frame):
 
                 self.canvas.itemconfigure(self.canvas.players[p][c],
                                           image=img)
+
+    def draw_tricks(self):
+        for p in xrange(4):
+            for c in xrange(13):
+                img = self.blank_img if c < len(self.game.players[p].tricks) else ''
+                self.canvas.itemconfigure(self.canvas.tricks[p][c], image=img)
 
     def draw_trick(self):
         if self.game.trick:
@@ -159,16 +216,25 @@ class WhistApp(Tk.Frame):
         return handle_card_click
 
     def redraw(self):
+        self.draw_trump()
         self.draw_players()
         self.draw_trick()
+        self.draw_tricks()
 
     def play_game(self):
         self.game.start()
         self.redraw()
-        while True:
+        while len(self.game.players[self.game.playing].hand) > 0:
             self.game.round()
             self.redraw()
+        print('---')
+        print('Ranking:')
 
+        for i in xrange(4):
+            print(self.game.players[i].name)
+            for t in self.game.players[i].tricks:
+                print '*',
+            print('')
 
 
 if __name__ == '__main__':
