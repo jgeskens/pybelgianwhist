@@ -118,6 +118,14 @@ class Game(object):
             self.players[p].sort()
             p = (p + 1) % 4
 
+    def collect(self):
+        for trick in self.tricks:
+            for played_card in trick.played_cards:
+                self.deck.deck.append(played_card[0])
+        for player in self.players:
+            player.tricks = []
+        self.tricks = []
+
     def round(self):
         print('---')
         self.trick = Trick()
@@ -239,6 +247,7 @@ if __name__ == '__main__':
 
         player = g.players[g.playing]
 
+    g.collect()
     print('---')
     print('Ranking:')
 

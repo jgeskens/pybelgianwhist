@@ -3,7 +3,7 @@ from collections import defaultdict
 import time
 from PIL import ImageTk, Image
 
-from whist import Game, Player, AI, Human, Card
+from whist import Game, Player, AI, Human, Card, Trick
 
 
 class UIHuman(Human):
@@ -89,16 +89,17 @@ class WhistApp(Tk.Frame):
             self.tag_to_card[self.canvas.players[1][c]] = (1, c)
 
         for c in xrange(13):
-            self.canvas.players[2][c] = self.canvas.create_image((self.size[0] - 16 - self.card_size[0],
-                                                                  self.middle[1] + c * self.card_offset[1]),
+            self.canvas.players[2][c] = self.canvas.create_image((self.middle[0] + c * self.card_offset[0],
+                                                                  16),
                                                                  image=None, anchor='nw')
             self.tag_to_card[self.canvas.players[2][c]] = (2, c)
 
         for c in xrange(13):
-            self.canvas.players[3][c] = self.canvas.create_image((self.middle[0] + c * self.card_offset[0],
-                                                                  16),
+            self.canvas.players[3][c] = self.canvas.create_image((self.size[0] - 16 - self.card_size[0],
+                                                                  self.middle[1] + c * self.card_offset[1]),
                                                                  image=None, anchor='nw')
             self.tag_to_card[self.canvas.players[3][c]] = (3, c)
+
 
         for t in self.tag_to_card.keys():
             self.canvas.tag_bind(t, '<ButtonRelease-1>', self.handle_card_click_factory(t))
@@ -124,7 +125,7 @@ class WhistApp(Tk.Frame):
         self.canvas.tricks = [[None] * 13 for p in xrange(4)]
 
         for c in xrange(13):
-            self.canvas.tricks[0][c] = self.canvas.create_image((self.middle[0],
+            self.canvas.tricks[0][c] = self.canvas.create_image((self.middle[0] + c * 4,
                                                                  self.size[1] - self.card_size[1] - 32),
                                                                 image='', anchor='sw')
 
@@ -134,14 +135,14 @@ class WhistApp(Tk.Frame):
                                                                 image='', anchor='w')
 
         for c in xrange(13):
-            self.canvas.tricks[2][c] = self.canvas.create_image((self.size[0] - self.card_size[0] - 32 + (c - 12) * 4,
-                                                                 self.size[1] / 2),
-                                                                image='', anchor='e')
-
-        for c in xrange(13):
-            self.canvas.tricks[3][c] = self.canvas.create_image((self.middle[0] + c * 4,
+            self.canvas.tricks[2][c] = self.canvas.create_image((self.middle[0] + c * 4,
                                                                  self.card_size[1] + 32),
                                                                 image='', anchor='nw')
+
+        for c in xrange(13):
+            self.canvas.tricks[3][c] = self.canvas.create_image((self.size[0] - self.card_size[0] - 32 + (c - 12) * 4,
+                                                                 self.size[1] / 2),
+                                                                image='', anchor='e')
 
         # Trick
 
@@ -222,19 +223,39 @@ class WhistApp(Tk.Frame):
         self.draw_tricks()
 
     def play_game(self):
-        self.game.start()
-        self.redraw()
-        while len(self.game.players[self.game.playing].hand) > 0:
-            self.game.round()
+        while True:
+            self.game.start()
             self.redraw()
-        print('---')
-        print('Ranking:')
+            while len(self.game.players[self.game.playing].hand) > 0:
+                print('---')
+                self.game.trick = Trick()
 
-        for i in xrange(4):
-            print(self.game.players[i].name)
-            for t in self.game.players[i].tricks:
-                print '*',
-            print('')
+                for i in xrange(4):
+                    player = self.game.players[self.game.playing]
+                    played_card = player.play(self.game)
+                    self.game.trick.play(played_card, player)
+                    self.game.playing = (self.game.playing + 1) % 4
+                    self.redraw()
+                    self.parent.update()
+                    time.sleep(1)
+
+                winning_card, winning_player = self.game.trick.winning(self.game.trump.suit)
+                print('%s gets the trick' % winning_player)
+                self.game.tricks.append(self.game.trick)
+                winning_player.tricks.append(self.game.trick)
+                self.game.trick = None
+                self.game.playing = self.game.players.index(winning_player)
+                self.redraw()
+                self.parent.update()
+            print('---')
+            print('Ranking:')
+
+            for i in xrange(4):
+                print(self.game.players[i].name)
+                for t in self.game.players[i].tricks:
+                    print '*',
+                print('')
+            self.game.collect()
 
 
 if __name__ == '__main__':
