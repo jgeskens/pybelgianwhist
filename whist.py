@@ -94,11 +94,13 @@ class Game(object):
         self.playing = 1
         self.tricks = []
         self.trick = None
+        self.mode = None
 
     def start(self):
         self.deck.shuffle()
         self.deck.hef_af()
         self.deal()
+        self.bidding()
 
     def deal(self):
         p = (self.dealer + 1) % 4
@@ -153,7 +155,9 @@ class Game(object):
         return hand
 
     def bidding(self):
-        pass
+        for player in self.players:
+            player.bid(self)
+
 
 class Player(object):
     def __init__(self, name, ai):
@@ -179,6 +183,11 @@ class Player(object):
         card = self.ai.play(self, game)
         print('%s plays %s.' % (self.name, card))
         return card
+    
+    def bid(self, game):
+        chosen_mode = self.ai.choose_mode(game)
+        print('Choose %s.' % (chosen_mode,))
+        return chosen_mode
 
     def valid_cards(self, game):
         return game.valid_cards(self.hand)
@@ -217,6 +226,9 @@ class AI(object):
             highest = sorted(player.hand, key=lambda c: c.rank)[-1]
             return player.hand.pop(player.hand.index(highest))
 
+    def choose_mode(self, game):
+        return 'vraag'
+
 
 class Human(object):
     def play(self, player, game):
@@ -229,12 +241,15 @@ class Human(object):
 
         return player.hand.pop(card_index)
 
+    def choose_mode(self, game):
+        return 'vraag'
+
 
 if __name__ == '__main__':
     random.seed()
 
     print('Welcome to Belgian Whist!')
-    g = Game((Player('Jef', AI()), Player('Koen', AI()), Player('Ingo', AI()), Player('Olivier', AI())))
+    g = Game((Player('Jef', Human()), Player('Koen', AI()), Player('Ingo', AI()), Player('Olivier', AI())))
     g.start()
     print('Trump card is %s.' % g.trump)
 
