@@ -25,15 +25,16 @@ class UIHuman(Human):
         return player.hand.pop(player.hand.index(get_clicked_card()))
 
     def bid(self, player, game):
-        self.bid = None
+        self.proposition = None
         possible_bids = game.get_possible_bids()
         dialog = Tk.Toplevel(game.ui.parent)
+        dialog.title('Bid')
         e = Tk.Entry(dialog)
         e.pack()
 
         def callback():
-            self.bid = e.get()
-            if self.bid in possible_bids:
+            self.proposition = e.get()
+            if self.proposition in possible_bids:
                 dialog.destroy()
             else:
                 print("Please enter a valid bid.")
@@ -42,7 +43,7 @@ class UIHuman(Human):
 
         dialog.wait_window()
 
-        return self.bid
+        return self.proposition
 
 
 def test_handler_factory(root):
@@ -247,8 +248,11 @@ class WhistApp(Tk.Frame):
 
     def play_game(self):
         while True:
-            self.game.start()
+            self.game.deck.shuffle()
+            self.game.deck.hef_af()
+            self.game.deal()
             self.redraw()
+            self.game.bidding()
             while len(self.game.players[self.game.playing].hand) > 0:
                 print('---')
                 self.game.trick = Trick()

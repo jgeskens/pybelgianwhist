@@ -282,12 +282,12 @@ class Human(object):
         print('%s, please make a bid' % player.name)
 
         sys.stdout.flush()
-        bid = raw_input()
-        while not bid in possible_bids:
+        proposition = raw_input()
+        while not proposition in possible_bids:
             print('Please choose from', possible_bids)
-            bid = raw_input()
+            proposition = raw_input()
 
-        return bid
+        return proposition
 
 
 if __name__ == '__main__':
