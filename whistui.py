@@ -1,5 +1,4 @@
 import Tkinter as Tk
-from collections import defaultdict
 import time
 from PIL import ImageTk, Image
 
@@ -18,7 +17,8 @@ class UIHuman(Human):
 
         game.ui.redraw()
 
-        while game.ui.clicked_card is None or not get_clicked_card() in player.valid_cards(game):
+        while game.ui.clicked_card is None\
+                or not get_clicked_card() in player.valid_cards(game):
             game.ui.parent.update()
             time.sleep(0.03)
 
@@ -30,6 +30,7 @@ class UIHuman(Human):
         dialog = Tk.Toplevel(game.ui.parent)
         e = Tk.Entry(dialog)
         e.pack()
+
         def callback():
             self.bid = e.get()
             if self.bid in possible_bids:
@@ -70,21 +71,24 @@ class WhistApp(Tk.Frame):
         self.redraw()
         self.parent.after(0, self.play_game)
 
-
     def setup_ui(self):
         # Images
         self.bg_img = ImageTk.PhotoImage(Image.open('cards/green020.png'))
         cards = (str(Card(i % 13, i / 13)) for i in xrange(52))
-        self.card_imgs = dict((c, ImageTk.PhotoImage(Image.open('cards/%s.gif' % (c[1]+c[0]).lower())))
-            for c in cards)
+        self.card_imgs = dict((c, ImageTk.PhotoImage(
+            Image.open('cards/%s.gif' % (c[1]+c[0]).lower()))) for c in cards)
         self.blank_img = ImageTk.PhotoImage(Image.open('cards/b1fv.gif'))
 
-        self.card_size = (self.card_imgs['2H'].width(), self.card_imgs['2H'].height())
-        self.middle = ((self.size[0] - (self.card_offset[0] * 12 + self.card_size[0])) / 2,
-                       (self.size[1] - (self.card_offset[1] * 12 + self.card_size[1])) / 2)
+        self.card_size = (self.card_imgs['2H'].width(),
+                          self.card_imgs['2H'].height())
+        self.middle = ((self.size[0] - (self.card_offset[0] * 12 +
+                                        self.card_size[0])) / 2,
+                       (self.size[1] - (self.card_offset[1] * 12 +
+                                        self.card_size[1])) / 2)
 
         # Widgets
-        self.canvas = Tk.Canvas(self, width=self.size[0], height=self.size[1], bg='darkgreen', highlightthickness=0)
+        self.canvas = Tk.Canvas(self, width=self.size[0], height=self.size[1],
+                                bg='darkgreen', highlightthickness=0)
         self.canvas.pack(fill=Tk.BOTH, expand=1)
         self.canvas.bg_tiles = {}
 
