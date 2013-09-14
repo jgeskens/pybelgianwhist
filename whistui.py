@@ -226,12 +226,11 @@ class WhistApp(Tk.Frame):
 
     def draw_trick(self):
         if self.game.trick:
-            for i, c in enumerate(self.canvas.trick):
+            for i in xrange(4):
                 img = ''
                 if i < len(self.game.trick.played_cards):
                     img = self.card_imgs[str(self.game.trick.played_cards[i][0])]
-
-                self.canvas.itemconfigure(c, image=img)
+                self.canvas.itemconfigure(self.canvas.trick[(i + self.game.playing - 1) % 4], image=img)
         else:
             for c in self.canvas.trick:
                 self.canvas.itemconfigure(c, image='')
@@ -258,11 +257,12 @@ class WhistApp(Tk.Frame):
                 print('---')
                 self.game.trick = Trick()
 
+                currently_playing = self.game.playing
                 for i in xrange(4):
-                    player = self.game.players[self.game.playing]
+                    player = self.game.players[currently_playing]
                     played_card = player.play(self.game)
                     self.game.trick.play(played_card, player)
-                    self.game.playing = (self.game.playing + 1) % 4
+                    currently_playing = (currently_playing + 1) % 4
                     self.redraw()
                     self.parent.update()
                     time.sleep(1)
