@@ -1,8 +1,11 @@
 import random
 import sys
 
+
 RANKS = ('2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace')
 SUITS = ('spades', 'clubs', 'diamonds', 'hearts')
+BIDS = ('ask', 'join', 'pass')
+
 
 class Card(object):
     """
@@ -95,6 +98,7 @@ class Game(object):
         self.tricks = []
         self.trick = None
         self.mode = None
+        self.bids = []
 
     def start(self):
         self.deck.shuffle()
@@ -156,7 +160,21 @@ class Game(object):
 
     def bidding(self):
         for player in self.players:
-            player.bid(self)
+            bid = player.bid(self)
+            self.bids.append(bid)
+
+    def get_possible_bids(self):
+        """
+        Return the remaining possible bids
+        """
+        possible_bids = []
+        if not 'ask' in self.bids:
+            possible_bids.append('ask')
+        else:
+            if not 'join' in self.bids:
+                possible_bids.append('join')
+        possible_bids.append('pass')
+        return possible_bids
 
 
 class Player(object):
@@ -185,9 +203,9 @@ class Player(object):
         return card
     
     def bid(self, game):
-        chosen_mode = self.ai.choose_mode(game)
-        print('Choose %s.' % (chosen_mode,))
-        return chosen_mode
+        bid = self.ai.bid(self, game)
+        print('Choose %s.' % (bid,))
+        return bid
 
     def valid_cards(self, game):
         return game.valid_cards(self.hand)
@@ -226,8 +244,9 @@ class AI(object):
             highest = sorted(player.hand, key=lambda c: c.rank)[-1]
             return player.hand.pop(player.hand.index(highest))
 
-    def choose_mode(self, game):
-        return 'vraag'
+    def bid(self, player, game):
+        possible_bids = game.get_possible_bids()
+        return possible_bids[0]
 
 
 class Human(object):
@@ -241,8 +260,19 @@ class Human(object):
 
         return player.hand.pop(card_index)
 
-    def choose_mode(self, game):
-        return 'vraag'
+    def bid(self, player, game):
+        print(repr(player))
+        possible_bids = game.get_possible_bids()
+        print(possible_bids)
+        print('%s, please make a bid' % player.name)
+        
+        sys.stdout.flush()
+        bid = raw_input()
+        while not bid in possible_bids:
+            print('Please choose from', possible_bids)
+            bid = raw_input()
+
+        return bid
 
 
 if __name__ == '__main__':

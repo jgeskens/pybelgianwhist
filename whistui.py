@@ -24,6 +24,25 @@ class UIHuman(Human):
 
         return player.hand.pop(player.hand.index(get_clicked_card()))
 
+    def bid(self, player, game):
+        self.bid = None
+        possible_bids = game.get_possible_bids()
+        dialog = Tk.Toplevel(game.ui.parent)
+        e = Tk.Entry(dialog)
+        e.pack()
+        def callback():
+            self.bid = e.get()
+            if self.bid in possible_bids:
+                dialog.destroy()
+            else:
+                print("Please enter a valid bid.")
+        b = Tk.Button(dialog, text="Bid!", command=callback)
+        b.pack()
+
+        dialog.wait_window()
+
+        return self.bid
+
 
 def test_handler_factory(root):
     def test_handler(event):
