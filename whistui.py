@@ -29,6 +29,7 @@ class UIHuman(Human):
         possible_bids = game.get_possible_bids()
         dialog = Tk.Toplevel(game.ui.parent)
         dialog.title('Bid')
+        Tk.Label(dialog, text="Possible bids: " + ', '.join(possible_bids)).pack()
         e = Tk.Entry(dialog)
         e.pack()
 

@@ -136,6 +136,8 @@ class Game(object):
         for player in self.players:
             player.tricks = []
         self.tricks = []
+        self.dealer = (self.dealer + 1) % 4
+        self.playing = (self.dealer + 1) % 4
 
     def round(self):
         print('---')
@@ -164,9 +166,12 @@ class Game(object):
         return hand
 
     def bidding(self):
-        for player in self.players:
-            bid = player.bid(self)
+        self.bids = []
+        bidding_player = (self.dealer + 1) % 4
+        for i in xrange(4):
+            bid = self.players[bidding_player].bid(self)
             self.bids.append(bid)
+            bidding_player = (bidding_player + 1) % 4
 
     def get_possible_bids(self):
         """
@@ -210,7 +215,7 @@ class Player(object):
 
     def bid(self, game):
         bid = self.ai.bid(self, game)
-        print('Choose %s.' % (bid,))
+        print('%s proposes %s.' % (self.name, bid))
         return bid
 
     def valid_cards(self, game):
