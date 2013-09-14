@@ -93,6 +93,44 @@ class Trick(object):
         return [card for card in cards if self.sort_key(card, trump) > winning]
 
 
+class GameMode(object):
+    NORMAL = 'normal'
+    offensive = []        # Player(s) on the offensive side
+    defensive = []        # Players on the defensive side
+
+    def __init__(self, players, proposals):
+        for i, proposal in enumerate(proposals):
+            if proposal == 'ask' or proposal == 'join':
+                self.offensive.append(players[i])
+            else:
+                self.defensive.append(players[i])
+        self.mode = self.NORMAL
+        self.offensive_names = [player.name for player in self.offensive]
+        self.defensive_names = [player.name for player in self.defensive]
+
+    def post_game(self):
+        """
+        Decide who won
+        """
+        if self.mode == self.NORMAL:
+            count = 0
+            for player in self.offensive:
+                count += player.trick_count()
+            if count > 7:
+                winners = self.offensive_names
+                winning_count = count
+            else:
+                winners = self.defensive_names
+                winning_count = 13 - count
+        print('Har har hooray, %s won with %d tricks.' %
+              (' and '.join(winners), winning_count))
+
+    def __repr__(self):
+        return '<GameMode: %s | %s vs. %s>' % (self.mode,
+                                               ', '.join(self.offensive_names),
+                                               ', '.join(self.defensive_names))
+
+
 class Game(object):
     def __init__(self, players):
         self.deck = Deck()
@@ -167,11 +205,14 @@ class Game(object):
 
     def bidding(self):
         self.bids = []
+        players = []
         bidding_player = (self.dealer + 1) % 4
         for i in xrange(4):
             bid = self.players[bidding_player].bid(self)
+            players.append(self.players[bidding_player])
             self.bids.append(bid)
             bidding_player = (bidding_player + 1) % 4
+        self.mode = GameMode(players, self.bids)
 
     def get_possible_bids(self):
         """
@@ -220,6 +261,9 @@ class Player(object):
 
     def valid_cards(self, game):
         return game.valid_cards(self.hand)
+
+    def trick_count(self):
+        return len(self.tricks)
 
     def __repr__(self):
         return '<Player: %s (%s)>' % (self.name,
@@ -317,6 +361,7 @@ if __name__ == '__main__':
 
         player = g.players[g.playing]
 
+    g.mode.post_game()
     g.collect()
     print('---')
     print('Ranking:')

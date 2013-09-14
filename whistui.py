@@ -283,6 +283,7 @@ class WhistApp(Tk.Frame):
                 for t in self.game.players[i].tricks:
                     print '*',
                 print('')
+            self.game.mode.post_game()
             self.game.collect()
 
 
