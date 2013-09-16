@@ -1,8 +1,12 @@
 import random
 import sys
 
-RANKS = ('2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace')
+
+RANKS = ('2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king',
+         'ace')
 SUITS = ('spades', 'clubs', 'diamonds', 'hearts')
+BIDS = ('ask', 'join', 'pass')
+
 
 class Card(object):
     """
@@ -11,7 +15,8 @@ class Card(object):
 
     def __init__(self, rank, suit):
         #self.name = '%s of %s' % (RANKS[rank], SUITS[suit])
-        self.name = '%s%s' % (RANKS[rank][0] if rank != 8 else 't', SUITS[suit][0].upper())
+        self.name = '%s%s' % (RANKS[rank][0] if rank != 8 else 't',
+                              SUITS[suit][0].upper())
         self.rank = rank
         self.suit = suit
 
@@ -27,9 +32,12 @@ def find_card_from_string(s, cards):
         rank_str, suit_str = s.split(' of ')
         rank = RANKS.index(rank_str)
         suit = SUITS.index(suit_str)
-        found = [i for i, c in enumerate(cards) if c.rank == rank and c.suit == suit]
+        found = [i for i, c in enumerate(cards)
+                 if c.rank == rank and c.suit == suit]
     else:
-        found = [i for i, c in enumerate(cards) if RANKS[c.rank][0] == s[0] or (c.rank == 8 and s[0] == 't') and SUITS[c.suit][0] == s[1].lower()]
+        found = [i for i, c in enumerate(cards) if RANKS[c.rank][0] == s[0]
+                 or (c.rank == 8 and s[0] == 't')
+                 and SUITS[c.suit][0] == s[1].lower()]
     return found[0] if found else None
 
 
@@ -53,7 +61,7 @@ class Deck(object):
 class Trick(object):
     def __init__(self):
         self.played_cards = []
-    
+
     def suit(self):
         if len(self.played_cards) > 0:
             return self.played_cards[0][0].suit
@@ -68,7 +76,7 @@ class Trick(object):
 
     def winning(self, trump=-1):
         return self.sort(trump)[-1]
-    
+
     def sort_key(self, card, trump=-1):
         suit_rank = 0
         suit = self.suit()
@@ -77,12 +85,50 @@ class Trick(object):
         elif suit == -1 or suit == card.suit:
             suit_rank = 1
         return suit_rank * 13 + card.rank
-    
+
     def winning_cards(self, cards, trump):
         if len(self.played_cards) == 0:
             return []
         winning = self.sort_key(self.winning(trump)[0], trump)
         return [card for card in cards if self.sort_key(card, trump) > winning]
+
+
+class GameMode(object):
+    NORMAL = 'normal'
+    offensive = []        # Player(s) on the offensive side
+    defensive = []        # Players on the defensive side
+
+    def __init__(self, players, proposals):
+        for i, proposal in enumerate(proposals):
+            if proposal == 'ask' or proposal == 'join':
+                self.offensive.append(players[i])
+            else:
+                self.defensive.append(players[i])
+        self.mode = self.NORMAL
+        self.offensive_names = [player.name for player in self.offensive]
+        self.defensive_names = [player.name for player in self.defensive]
+
+    def post_game(self):
+        """
+        Decide who won
+        """
+        if self.mode == self.NORMAL:
+            count = 0
+            for player in self.offensive:
+                count += player.trick_count()
+            if count > 7:
+                winners = self.offensive_names
+                winning_count = count
+            else:
+                winners = self.defensive_names
+                winning_count = 13 - count
+        print('Har har hooray, %s won with %d tricks.' %
+              (' and '.join(winners), winning_count))
+
+    def __repr__(self):
+        return '<GameMode: %s | %s vs. %s>' % (self.mode,
+                                               ', '.join(self.offensive_names),
+                                               ', '.join(self.defensive_names))
 
 
 class Game(object):
@@ -94,11 +140,14 @@ class Game(object):
         self.playing = 1
         self.tricks = []
         self.trick = None
+        self.mode = None
+        self.bids = []
 
     def start(self):
         self.deck.shuffle()
         self.deck.hef_af()
         self.deal()
+        self.bidding()
 
     def deal(self):
         p = (self.dealer + 1) % 4
@@ -125,6 +174,8 @@ class Game(object):
         for player in self.players:
             player.tricks = []
         self.tricks = []
+        self.dealer = (self.dealer + 1) % 4
+        self.playing = (self.dealer + 1) % 4
 
     def round(self):
         print('---')
@@ -153,7 +204,29 @@ class Game(object):
         return hand
 
     def bidding(self):
-        pass
+        self.bids = []
+        players = []
+        bidding_player = (self.dealer + 1) % 4
+        for i in xrange(4):
+            bid = self.players[bidding_player].bid(self)
+            players.append(self.players[bidding_player])
+            self.bids.append(bid)
+            bidding_player = (bidding_player + 1) % 4
+        self.mode = GameMode(players, self.bids)
+
+    def get_possible_bids(self):
+        """
+        Return the remaining possible bids
+        """
+        possible_bids = []
+        if not 'ask' in self.bids:
+            possible_bids.append('ask')
+        else:
+            if not 'join' in self.bids:
+                possible_bids.append('join')
+        possible_bids.append('pass')
+        return possible_bids
+
 
 class Player(object):
     def __init__(self, name, ai):
@@ -167,7 +240,8 @@ class Player(object):
 
     def sorted_suit(self, suit, hand=None):
         hand = hand or self.hand
-        return sorted((c for c in hand if c.suit == suit), key=lambda card: card.rank)
+        return sorted((c for c in hand if c.suit == suit),
+                      key=lambda card: card.rank)
 
     def highest(self, suit):
         return self.sorted_suit(suit)[-1]
@@ -180,11 +254,20 @@ class Player(object):
         print('%s plays %s.' % (self.name, card))
         return card
 
+    def bid(self, game):
+        bid = self.ai.bid(self, game)
+        print('%s proposes %s.' % (self.name, bid))
+        return bid
+
     def valid_cards(self, game):
         return game.valid_cards(self.hand)
 
+    def trick_count(self):
+        return len(self.tricks)
+
     def __repr__(self):
-        return '<Player: %s (%s)>' % (self.name, ', '.join(map(str, self.hand)))
+        return '<Player: %s (%s)>' % (self.name,
+                                      ', '.join(map(str, self.hand)))
 
     def __str__(self):
         return self.name
@@ -195,18 +278,25 @@ class AI(object):
         if len(game.trick.played_cards) > 0:
             in_suits = player.sorted_suit(game.trick.played_cards[0][0].suit)
             if in_suits:
-                winning_cards = game.trick.winning_cards(in_suits, game.trump.suit)
+                winning_cards = game.trick.winning_cards(in_suits,
+                                                         game.trump.suit)
                 if winning_cards:
-                    return player.hand.pop(player.hand.index(winning_cards[-1]))
+                    return player.hand.pop(
+                        player.hand.index(winning_cards[-1]))
                 else:
                     return player.hand.pop(player.hand.index(in_suits[0]))
             trumps = player.sorted_suit(game.trump.suit)
             if trumps:
-                winning_cards = game.trick.winning_cards(trumps, game.trump.suit)
+                winning_cards =\
+                    game.trick.winning_cards(trumps, game.trump.suit)
                 if winning_cards:
-                    return player.hand.pop(player.hand.index(winning_cards[-1]))
+                    return player.hand.pop(
+                        player.hand.index(winning_cards[-1]))
                 else:
-                    lowest_non_trump = sorted(player.hand, key=lambda c: c.rank * (2 if c.suit == game.trump.suit else 1))[0]
+                    lowest_non_trump = sorted(
+                        player.hand,
+                        key=lambda c: c.rank * (2 if c.suit == game.trump.suit
+                                                else 1))[0]
                     return player.hand.pop(player.hand.index(lowest_non_trump))
             lowest = sorted(player.hand, key=lambda c: c.rank)[0]
             return player.hand.pop(player.hand.index(lowest))
@@ -217,11 +307,16 @@ class AI(object):
             highest = sorted(player.hand, key=lambda c: c.rank)[-1]
             return player.hand.pop(player.hand.index(highest))
 
+    def bid(self, player, game):
+        possible_bids = game.get_possible_bids()
+        return possible_bids[0]
+
 
 class Human(object):
     def play(self, player, game):
         print(repr(player))
-        print(repr(game.trick.winning_cards(player.valid_cards(game), game.trump)))
+        print(repr(game.trick.winning_cards(player.valid_cards(game),
+                                            game.trump)))
         print('%s, which card? ' % player.name)
 
         sys.stdout.flush()
@@ -229,12 +324,31 @@ class Human(object):
 
         return player.hand.pop(card_index)
 
+    def bid(self, player, game):
+        print(repr(player))
+        possible_bids = game.get_possible_bids()
+        print(possible_bids)
+        print('%s, please make a bid' % player.name)
+
+        sys.stdout.flush()
+        proposition = raw_input()
+        while not proposition in possible_bids:
+            print('Please choose from', possible_bids)
+            proposition = raw_input()
+
+        return proposition
+
 
 if __name__ == '__main__':
     random.seed()
 
     print('Welcome to Belgian Whist!')
-    g = Game((Player('Jef', AI()), Player('Koen', AI()), Player('Ingo', AI()), Player('Olivier', AI())))
+    g = Game((
+        Player('Jef', Human()),
+        Player('Koen', AI()),
+        Player('Ingo', AI()),
+        Player('Olivier', AI())
+    ))
     g.start()
     print('Trump card is %s.' % g.trump)
 
@@ -247,6 +361,7 @@ if __name__ == '__main__':
 
         player = g.players[g.playing]
 
+    g.mode.post_game()
     g.collect()
     print('---')
     print('Ranking:')
@@ -256,4 +371,3 @@ if __name__ == '__main__':
         for t in g.players[i].tricks:
             print '*',
         print('')
-

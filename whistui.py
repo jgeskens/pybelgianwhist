@@ -1,5 +1,4 @@
 import Tkinter as Tk
-from collections import defaultdict
 import time
 from PIL import ImageTk, Image
 
@@ -18,11 +17,34 @@ class UIHuman(Human):
 
         game.ui.redraw()
 
-        while game.ui.clicked_card is None or not get_clicked_card() in player.valid_cards(game):
+        while game.ui.clicked_card is None\
+                or not get_clicked_card() in player.valid_cards(game):
             game.ui.parent.update()
             time.sleep(0.03)
 
         return player.hand.pop(player.hand.index(get_clicked_card()))
+
+    def bid(self, player, game):
+        self.proposition = None
+        possible_bids = game.get_possible_bids()
+        dialog = Tk.Toplevel(game.ui.parent)
+        dialog.title('Bid')
+        Tk.Label(dialog, text="Possible bids: " + ', '.join(possible_bids)).pack()
+        e = Tk.Entry(dialog)
+        e.pack()
+
+        def callback():
+            self.proposition = e.get()
+            if self.proposition in possible_bids:
+                dialog.destroy()
+            else:
+                print("Please enter a valid bid.")
+        b = Tk.Button(dialog, text="Bid!", command=callback)
+        b.pack()
+
+        dialog.wait_window()
+
+        return self.proposition
 
 
 def test_handler_factory(root):
@@ -51,21 +73,24 @@ class WhistApp(Tk.Frame):
         self.redraw()
         self.parent.after(0, self.play_game)
 
-
     def setup_ui(self):
         # Images
         self.bg_img = ImageTk.PhotoImage(Image.open('cards/green020.png'))
         cards = (str(Card(i % 13, i / 13)) for i in xrange(52))
-        self.card_imgs = dict((c, ImageTk.PhotoImage(Image.open('cards/%s.gif' % (c[1]+c[0]).lower())))
-            for c in cards)
+        self.card_imgs = dict((c, ImageTk.PhotoImage(
+            Image.open('cards/%s.gif' % (c[1]+c[0]).lower()))) for c in cards)
         self.blank_img = ImageTk.PhotoImage(Image.open('cards/b1fv.gif'))
 
-        self.card_size = (self.card_imgs['2H'].width(), self.card_imgs['2H'].height())
-        self.middle = ((self.size[0] - (self.card_offset[0] * 12 + self.card_size[0])) / 2,
-                       (self.size[1] - (self.card_offset[1] * 12 + self.card_size[1])) / 2)
+        self.card_size = (self.card_imgs['2H'].width(),
+                          self.card_imgs['2H'].height())
+        self.middle = ((self.size[0] - (self.card_offset[0] * 12 +
+                                        self.card_size[0])) / 2,
+                       (self.size[1] - (self.card_offset[1] * 12 +
+                                        self.card_size[1])) / 2)
 
         # Widgets
-        self.canvas = Tk.Canvas(self, width=self.size[0], height=self.size[1], bg='darkgreen', highlightthickness=0)
+        self.canvas = Tk.Canvas(self, width=self.size[0], height=self.size[1],
+                                bg='darkgreen', highlightthickness=0)
         self.canvas.pack(fill=Tk.BOTH, expand=1)
         self.canvas.bg_tiles = {}
 
@@ -201,12 +226,11 @@ class WhistApp(Tk.Frame):
 
     def draw_trick(self):
         if self.game.trick:
-            for i, c in enumerate(self.canvas.trick):
+            for i in xrange(4):
                 img = ''
                 if i < len(self.game.trick.played_cards):
                     img = self.card_imgs[str(self.game.trick.played_cards[i][0])]
-
-                self.canvas.itemconfigure(c, image=img)
+                self.canvas.itemconfigure(self.canvas.trick[(i + self.game.playing - 1) % 4], image=img)
         else:
             for c in self.canvas.trick:
                 self.canvas.itemconfigure(c, image='')
@@ -224,17 +248,21 @@ class WhistApp(Tk.Frame):
 
     def play_game(self):
         while True:
-            self.game.start()
+            self.game.deck.shuffle()
+            self.game.deck.hef_af()
+            self.game.deal()
             self.redraw()
+            self.game.bidding()
             while len(self.game.players[self.game.playing].hand) > 0:
                 print('---')
                 self.game.trick = Trick()
 
+                currently_playing = self.game.playing
                 for i in xrange(4):
-                    player = self.game.players[self.game.playing]
+                    player = self.game.players[currently_playing]
                     played_card = player.play(self.game)
                     self.game.trick.play(played_card, player)
-                    self.game.playing = (self.game.playing + 1) % 4
+                    currently_playing = (currently_playing + 1) % 4
                     self.redraw()
                     self.parent.update()
                     time.sleep(1)
@@ -255,6 +283,7 @@ class WhistApp(Tk.Frame):
                 for t in self.game.players[i].tricks:
                     print '*',
                 print('')
+            self.game.mode.post_game()
             self.game.collect()
 
 
