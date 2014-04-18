@@ -8,8 +8,9 @@ Usage:
 from setuptools import setup
 
 APP = ['whistui.py']
-DATA_FILES = ['cards']
-OPTIONS = {'argv_emulation': False}
+DATA_FILES = ['cards', 'Info.plist', 'icon.icns']
+OPTIONS = {'argv_emulation': False,
+           'plist': 'Info.plist'}
 
 setup(
     app=APP,

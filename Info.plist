@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE plist PUBLIC '-//Apple Computer//DTD PLIST 1.0//EN' 'http://www.apple.com/DTDs/PropertyList-1.0.dtd'>
+<plist version='1.0'>
+  <dict>
+    <!-- Used by py2app to generate application bundle -->
+    <key>CFBundleName</key>
+    <string>Belgian Whist</string>
+    <!-- Package type is an Application -->
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <!-- Version number - appears in About box -->
+    <key>CFBundleShortVersionString</key>
+    <string>0.1</string>
+    <!-- Build number - appears in About box -->
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <!-- Copyright notice - apears in About box -->
+    <key>NSHumanReadableCopyright</key>
+    <string>© Jef Geskens 2014</string>
+    <key>CFBundleIconFile</key>
+    <string>icon</string>
+  </dict>
+</plist>
