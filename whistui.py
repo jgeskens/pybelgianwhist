@@ -1,4 +1,5 @@
 import Tkinter as Tk
+import os
 import time
 from PIL import ImageTk, Image
 
@@ -29,6 +30,8 @@ class UIHuman(Human):
         possible_bids = game.get_possible_bids()
         dialog = Tk.Toplevel(game.ui.parent)
         dialog.title('Bid')
+        dialog.lift()
+
         Tk.Label(dialog, text="Possible bids: " + ', '.join(possible_bids)).pack()
         e = Tk.Entry(dialog)
         e.pack()
@@ -300,7 +303,7 @@ if __name__ == '__main__':
     app = WhistApp(root, g)
 
     root.lift()
-    root.call('wm', 'attributes', '.', '-topmost', True)
-    root.after_idle(root.call, 'wm', 'attributes', '.', '-topmost', False)
+    # root.call('wm', 'attributes', '.', '-topmost', True)
+    # root.after_idle(root.call, 'wm', 'attributes', '.', '-topmost', False)
 
     root.mainloop()
