@@ -95,15 +95,19 @@ class Trick(object):
 
 class GameMode(object):
     NORMAL = 'normal'
-    offensive = []        # Player(s) on the offensive side
-    defensive = []        # Players on the defensive side
+    offensive = None        # Player(s) on the offensive side
+    defensive = None        # Players on the defensive side
 
     def __init__(self, players, proposals):
+        self.offensive = []
+        self.defensive = []
+
         for i, proposal in enumerate(proposals):
             if proposal == 'ask' or proposal == 'join':
                 self.offensive.append(players[i])
             else:
                 self.defensive.append(players[i])
+
         self.mode = self.NORMAL
         self.offensive_names = [player.name for player in self.offensive]
         self.defensive_names = [player.name for player in self.defensive]
@@ -112,18 +116,21 @@ class GameMode(object):
         """
         Decide who won
         """
+        winners = []
+        winning_count = 0
         if self.mode == self.NORMAL:
             count = 0
             for player in self.offensive:
                 count += player.trick_count()
-            if count > 7:
+            if count >= 8:
                 winners = self.offensive_names
                 winning_count = count
             else:
                 winners = self.defensive_names
                 winning_count = 13 - count
-        print('Har har hooray, %s won with %d tricks.' %
+        print('Yay! %s won with %d tricks.' %
               (' and '.join(winners), winning_count))
+
 
     def __repr__(self):
         return '<GameMode: %s | %s vs. %s>' % (self.mode,
@@ -328,7 +335,7 @@ class Human(object):
         print(repr(player))
         possible_bids = game.get_possible_bids()
         print(possible_bids)
-        print('%s, please make a bid' % player.name)
+        print('%s, please make a bid: ' % player.name)
 
         sys.stdout.flush()
         proposition = raw_input()
